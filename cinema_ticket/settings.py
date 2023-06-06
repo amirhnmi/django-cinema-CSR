@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "rest_framework",
     'widget_tweaks',
 
     "accounts",
@@ -162,3 +163,11 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = "mr.arhnmi@gmail.com"
 EMAIL_HOST_PASSWORD = "ncxywemnbtswysad"
+
+
+# api permissions
+REST_FRAMEWORK ={
+    "DEFAULT_PERMISSION_CLASSES":[
+        "rest_framework.permissions.AllowAny"
+    ]
+}

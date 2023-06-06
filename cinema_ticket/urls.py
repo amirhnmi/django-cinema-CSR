@@ -8,7 +8,14 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("accounts/", include("accounts.urls")),
-    path('', include('home.urls')),
+    path('categories/screening/', include('screenings.urls')),
+    path('categories/theater/', include('theater.urls')),
+    path('categories/artandexpriens/', include('artAndExpriens.urls')),
+    path('categories/childrentheater/', include('childrenTheater.urls')),
+    path('categories/comedytheater/', include('comedyTheater.urls')),
+    path('news/', include('news.urls')),
+    path('salestable/', include('salesTable.urls')),
+
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

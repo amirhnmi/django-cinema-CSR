@@ -1,4 +1,12 @@
-from django.shortcuts import render
+from rest_framework import generics
+from .models import Screening
+from .serializers import ScreeningSerializer
 
-# Create your views here.
+class ScreeningListView(generics.ListCreateAPIView):
+    queryset = Screening.objects.all()
+    serializer_class = ScreeningSerializer
+
+class ScreeningDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Screening.objects.all()
+    serializer_class = ScreeningSerializer
 

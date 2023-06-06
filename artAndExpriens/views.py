@@ -1,3 +1,12 @@
-from django.shortcuts import render
+from rest_framework import generics
+from .models import ArtAndExpriens
+from .serializers import ArtAndExpriensSerializer
 
-# Create your views here.
+class ArtAndExpriensListView(generics.ListCreateAPIView):
+    queryset = ArtAndExpriens.objects.all()
+    serializer_class = ArtAndExpriensSerializer
+
+class ArtAndExpriensDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ArtAndExpriens.objects.all()
+    serializer_class = ArtAndExpriensSerializer
+
