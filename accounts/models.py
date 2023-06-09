@@ -10,8 +10,4 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = CustomUserManager()
-    iran_phone_regex = RegexValidator(
-        regex=r'^(\+98|0)?9\d{9}$',
-        message="Phone number must be entered in the format: '09123456789' or '+989123456789'."
-    )
-    phone_number = models.CharField(validators=[iran_phone_regex], max_length=14, blank=True, null=True,verbose_name="شماره تماس")
+    phone_number = models.CharField(max_length=14, blank=True, null=True,verbose_name="شماره تماس")

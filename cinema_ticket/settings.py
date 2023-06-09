@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework",
+    "rest_framework.authtoken",
+    'corsheaders',
     'widget_tweaks',
 
     "accounts",
@@ -61,6 +63,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = 'cinema_ticket.urls'
@@ -165,9 +169,21 @@ EMAIL_HOST_USER = "mr.arhnmi@gmail.com"
 EMAIL_HOST_PASSWORD = "ncxywemnbtswysad"
 
 
-# api permissions
+# api permissions & authentication
 REST_FRAMEWORK ={
     "DEFAULT_PERMISSION_CLASSES":[
         "rest_framework.permissions.AllowAny"
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES":[
+        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework.authentication.TokenAuthentication"
     ]
 }
+
+# Cross-Origin Resource Sharing
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    'http://example.com',
+]

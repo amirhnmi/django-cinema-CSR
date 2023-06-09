@@ -11,7 +11,7 @@ urlpatterns = [
     path('categories/screening/', include('screenings.urls')),
     path('categories/theater/', include('theater.urls')),
     path('categories/artandexpriens/', include('artAndExpriens.urls')),
-    path('categories/childrentheater/', include('childrenTheater.urls')),
+    path('categories/childrenstheater/', include('childrenTheater.urls')),
     path('categories/comedytheater/', include('comedyTheater.urls')),
     path('news/', include('news.urls')),
     path('salestable/', include('salesTable.urls')),

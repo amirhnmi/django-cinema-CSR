@@ -1,79 +1,116 @@
-from django.shortcuts import render, redirect
-from django.views import generic
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User
+from django.urls import reverse_lazy
+from django.contrib.auth import get_user_model
+from rest_framework.views import APIView 
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import CustomUserSerializer,ForgetPasswordSerializer,PasswordResetSerializer
 from .models import CustomUser
-from django.contrib.auth.decorators import login_required
-from .forms import LoginForm,RegisterForm
-from django.urls import reverse_lazy, reverse
-from django.contrib.auth.views import PasswordResetView, PasswordResetDoneView, PasswordResetConfirmView, PasswordResetCompleteView
+from rest_framework.permissions import AllowAny
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
 # Create your views here.
 
-def register_view(request):
-    form = RegisterForm(request.POST or None)
-    if form.is_valid():
-        username = form.cleaned_data.get("username")
-        email = form.cleaned_data.get("email")
-        phone_number = form.cleaned_data.get("phone_number")
-        password1 = form.cleaned_data.get("password1")
-        CustomUser.objects.create_user(username=username,email=email,password=password1,phone_number=phone_number)
-        return redirect("/accounts/login/")
-    context={
-        "form":form
-    }
-    return render(request,"accounts/register.html",context)
-
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect("/")
-    if request.method == "GET":
-        form = LoginForm()
-    elif request.method == "POST":
-        form = LoginForm(data=request.POST)
-        if form.is_valid():
-            email = form.cleaned_data.get("email")
-            password = form.cleaned_data.get("password")
-            user = authenticate(request=request, email=email, password=password)
-            if user is not None:
-                login(request, user=user)
-                return redirect("/")
-            form.add_error("email", "ایمیل یا رمزعبور نادرست است")
-            form.add_error("password", "ایمیل یا رمزعبور نادرست است")
-    context = {
-        "form": form
-    }
-    return render(request, "accounts/login.html", context)
+class RegisterApiView(APIView):
+    permission_classes = [AllowAny]
+    def post(self,request):
+        serializer = CustomUserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 
 
-def logout_view(request):
-    logout(request)
-    return redirect("/")
+class LoginApiView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+
+        user = authenticate(request=request,email=email, password=password)
+        if user is not None:
+            login(request, user=user)
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@login_required
-def dashboard_view(request):
-    return render(request, "dashboard/user_dashboard.html")
+
+class UserDetailView(APIView):
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+        token_key = request.data.get('token')
+
+        token_obj = Token.objects.get(key=token_key)
+        user = token_obj.user
+
+        user_data = {
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            "phone_number":user.phone_number
+        }
+
+        return Response(user_data, status=status.HTTP_200_OK)
 
 
 # password reset --------------
-class UserPaswordResetView(PasswordResetView):
-    template_name = "password_reset/password_reset.html"
-    email_template_name = "password_reset/password_reset_email.html"
-    html_email_template_name= "password_reset/password_reset_email_template.html"
-    subject_template_name = "password_reset/password_reset_subject.txt"
-    from_email = "mr.arhnmi@gmail.com"
-    success_url = reverse_lazy("accounts:password_reset_done")
 
+class ForgetPasswordView(APIView):
+    def post(self, request):
+        serializer = ForgetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = CustomUser.objects.get(email=email)
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
+            # Generate a unique token for the password reset link
+            token, _ = Token.objects.get_or_create(user=user)
+            user.auth_token = token
+            user.save()
+            # Send an email to the user with a password reset link
+            subject = 'Password Reset For CinemaTicket'
+            message = f'Please click the following link to reset your password: http://localhost:3000/auth/login/password_reset/{token}'
+            from_email = "mr.arhnmi@gmail.com"
+            recipient_list = [email]
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+            return Response({'success': 'Password reset email has been sent.'}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class UserPasswordResetDoneView(PasswordResetDoneView):
-    template_name = "password_reset/password_reset_done.html"
+class PasswordResetView(APIView):
+    authentication_classes = [TokenAuthentication]
 
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            token = request.data.get('token')
+            password = request.data.get("password")
 
-class UserPasswordResetConfirmView(PasswordResetConfirmView):
-    template_name = "password_reset/password_reset_confirm.html"
-    success_url = reverse_lazy("accounts:password_reset_complate")
+            try:
+                user = CustomUser.objects.get(auth_token=token)
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'Invalid token1.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            
+            token_generator = PasswordResetTokenGenerator()
+            if token_generator.check_token(user, token):
+                user.set_password(password)
+                user.save()
+                
+                return Response({'success': 'Password has been reset.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Invalid token.', 'user_email': user.email, "auth_token":token,"password":password}, status=status.HTTP_400_BAD_REQUEST)
+                # return Response({'error': 'Invalid token11.'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class UserPasswordResetComplateView(PasswordResetCompleteView):
-    template_name = "password_reset/password_reset_complate.html"
